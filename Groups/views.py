@@ -19,38 +19,44 @@ def index(request):
 
 def addGroup(request):
 
-    if request.method == "POST":        
+    if request.method == "POST":
         req = request.POST
         name = req.get('name')
-        try:
-            name_field = req.get('name', '').strip()
-            if not name_field:
-                messages.error(request, 'Group field is required')
-            if Group.objects.filter(name=name).exists():
-                messages.error(request, 'Group is already exists with same name')
-            Group.objects.create(name=name)        
-        except ValidationError as e:
-            messages.error(request, 'Validation error: '+str(e))
+        if not name:
+            messages.warning(request, 'Please provide a name for the Group.')
+        else:
+
+            try:
+                Group.objects.get(name=name)
+                messages.warning(request,'Group already exists with same name')
+            except Group.DoesNotExist:
+                Group.objects.create(name=name)
+                messages.success(request,'new Group created')
+
     return redirect('groups')
     
 def editGroup(request):
+    if request.method == "POST":
+        req = request.POST
+        name = req.get('name')
+        g_id = req.get('id')
 
-    req = request.POST
-    name = req.get('name')
-    g_id = request.POST.get('id')
+        try:
+            group = Group.objects.get(id=g_id)
+            name_field = name.strip()
+            if not name_field:
+                messages.warning(request, 'Group name field is required')
+            elif Group.objects.exclude(id=g_id).filter(name=name).exists():
+                messages.warning(request, 'Group already exists with the same name')
+            else:
+                group.name = name
+                group.save()
+                messages.success(request, 'Group updated successfully')
+        except Group.DoesNotExist:
+            messages.warning(request, 'Group not found')
 
-    # try:
-    #     name_field = req.get('name', '').strip()
-    #     if not name_field:
-    #         messages.error(request, 'Group field is required')
-    #     if Group.objects.exclude(id = g_id).filter(name = name).exists():
-    #         messages.error(request, 'Group is already exists with same name')     
-    # except:    
-    group = Group.objects.get(id=g_id)
-    group.name = name
-    group.save()
-    messages.success(request, 'Group updated successfully')
     return redirect('groups')
+
 
 def deleteGroup(request):
     
